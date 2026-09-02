@@ -25,7 +25,7 @@ app.use(helmet());
 // CORS configuration with client origin restriction
 app.use(
   cors({
-    origin: env.CLIENT_URL || 'http://localhost:3000',
+    origin: env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   })
 );
