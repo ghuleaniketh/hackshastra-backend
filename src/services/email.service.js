@@ -66,6 +66,108 @@ export const sendVerificationEmail = async ({ to, fullName, eventTitle, verifica
 };
 
 /**
+ * Send confirmed Trainer Pass with card PNG / PDF attachments directly to the user
+ */
+export const sendPassEmail = async ({
+  to,
+  fullName,
+  eventTitle = 'Beyond the Screen',
+  passId,
+  pokemonName = 'Starter Partner',
+  imageDataUrl,
+  pdfDataUrl,
+}) => {
+  try {
+    const activeTransporter = createTransporter();
+    
+    const attachments = [];
+
+    // Attach PNG Card if provided
+    if (imageDataUrl && imageDataUrl.startsWith('data:image/')) {
+      const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+      attachments.push({
+        filename: `${(fullName || 'Trainer').replace(/\s+/g, '_')}_Trainer_Card.png`,
+        content: Buffer.from(base64Data, 'base64'),
+        cid: 'trainerCardImg', // embeddable inline in html
+      });
+    }
+
+    // Attach PDF Pass if provided
+    if (pdfDataUrl && pdfDataUrl.startsWith('data:application/pdf')) {
+      const base64Pdf = pdfDataUrl.replace(/^data:application\/pdf;base64,/, '');
+      attachments.push({
+        filename: `${(fullName || 'Trainer').replace(/\s+/g, '_')}_Beyond_The_Screen_Pass.pdf`,
+        content: Buffer.from(base64Pdf, 'base64'),
+        contentType: 'application/pdf',
+      });
+    }
+
+    const mailOptions = {
+      from: env.MAIL_FROM,
+      to,
+      subject: `🎮 Your Official Trainer Pass for ${eventTitle} [PASS #${passId || 'CONFIRMED'}] — HackShastra`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 2px solid #EF4444; border-radius: 16px; background-color: #0A0F14; color: #FFFFFF;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: linear-gradient(135deg, #EF4444, #DC2626); color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 6px 18px; border-radius: 9999px; letter-spacing: 2px; text-transform: uppercase; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
+              OFFICIAL ARENA PASS
+            </div>
+            <h1 style="color: #FBBF24; margin: 16px 0 4px 0; font-size: 26px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+              ${eventTitle}
+            </h1>
+            <p style="color: #94A3B8; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px;">
+              SRM UNIVERSITY-AP • CV 402 • 16 SEP 2026 (2:30 PM)
+            </p>
+          </div>
+
+          <div style="background-color: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="color: #38BDF8; margin: 0 0 12px 0; font-size: 16px;">Welcome aboard, Trainer ${fullName || 'Challenger'}!</h3>
+            <p style="color: #CBD5E1; font-size: 14px; line-height: 1.6; margin: 0 0 12px 0;">
+              Your Pokédex registration has been confirmed! Your official partner Pokémon <strong>${pokemonName}</strong> is synchronized with your entry pass.
+            </p>
+            <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed #F59E0B; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-weight: bold; color: #FDE68A;">
+              PASS ID: <span style="font-family: monospace; letter-spacing: 2px;">${passId || 'BTS-CONFIRMED'}</span>
+            </div>
+          </div>
+
+          ${
+            attachments.some((a) => a.cid === 'trainerCardImg')
+              ? `
+            <div style="text-align: center; margin: 24px 0;">
+              <p style="color: #94A3B8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Your Collectible Partner Card</p>
+              <img src="cid:trainerCardImg" alt="Trainer Card" style="max-width: 320px; width: 100%; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 12px 30px rgba(0,0,0,0.8);" />
+            </div>
+          `
+              : ''
+          }
+
+          <div style="background-color: #1E293B; border-radius: 8px; padding: 14px; margin: 20px 0; font-size: 13px; color: #94A3B8; line-height: 1.5;">
+            <strong style="color: #F1F5F9;">📎 Attached to this email:</strong>
+            <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+              ${attachments.map((a) => `<li><strong>${a.filename}</strong></li>`).join('')}
+            </ul>
+            <p style="margin: 8px 0 0 0; font-size: 12px;">Please present your QR pass (either on your phone or printed) at the entrance of CV 402 on event day.</p>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 24px 0 16px 0;" />
+          <p style="font-size: 11px; color: #64748B; margin: 0; text-align: center;">
+            © ${new Date().getFullYear()} HackShastra SRM-AP Chapter • Beyond The Screen Operations
+          </p>
+        </div>
+      `,
+      attachments,
+    };
+
+    const info = await activeTransporter.sendMail(mailOptions);
+    logger.info(`Trainer pass email dispatched to ${to}`, { messageId: info.messageId, passId });
+    return info;
+  } catch (error) {
+    logger.error(`Failed to send pass email to ${to}:`, error);
+    throw error;
+  }
+};
+
+/**
  * Send email verification confirmation after email is verified
  */
 export const sendConfirmationEmail = async ({ to, fullName, eventTitle }) => {

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { transaction, query } from '../lib/database.js';
 import { generateVerificationToken, hashToken } from '../utils/token.js';
 import env from '../config/env.js';
-import { sendVerificationEmail, sendConfirmationEmail, sendRegistrationOtpEmail } from './email.service.js';
+import { sendVerificationEmail, sendConfirmationEmail, sendRegistrationOtpEmail, sendPassEmail } from './email.service.js';
 
 // In-memory store for registration OTPs (with expiry and rate limiting)
 const registrationOtpStore = new Map();
@@ -32,8 +32,8 @@ export const requestRegistrationOtp = async ({ email, fullName, eventId = 'beyon
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Enforce @srmap.edu.in domain
-  if (!normalizedEmail.endsWith('@srmap.edu.in')) {
+  // Enforce @srmap.edu.in domain in production
+  if (process.env.NODE_ENV === 'production' && !normalizedEmail.endsWith('@srmap.edu.in')) {
     const err = new Error('Registration is exclusive to SRM University-AP students. Email must end with @srmap.edu.in');
     err.statusCode = 400;
     throw err;
@@ -148,8 +148,8 @@ export const verifyRegistrationOtp = async ({ email, otp }) => {
 export const registerParticipant = async (eventId, registrationData) => {
   const normalizedEmail = (registrationData.email || '').trim().toLowerCase();
 
-  // Enforce @srmap.edu.in domain
-  if (!normalizedEmail.endsWith('@srmap.edu.in')) {
+  // Enforce @srmap.edu.in domain in production
+  if (process.env.NODE_ENV === 'production' && !normalizedEmail.endsWith('@srmap.edu.in')) {
     const err = new Error('Registration is exclusive to SRM University-AP students. Email must end with @srmap.edu.in');
     err.statusCode = 400;
     throw err;
@@ -292,15 +292,8 @@ export const registerParticipant = async (eventId, registrationData) => {
   // Clean up in-memory OTP store
   registrationOtpStore.delete(normalizedEmail);
 
-  // Send confirmation email if verified directly
-  if (result.isVerifiedDirectly) {
-    await sendConfirmationEmail({
-      to: result.registration.email,
-      fullName: result.registration.full_name,
-      eventTitle: result.eventTitle,
-    });
-  } else {
-    // Send verification link email
+  // If not verified via OTP, send verification link email
+  if (!result.isVerifiedDirectly) {
     await sendVerificationEmail({
       to: result.registration.email,
       fullName: result.registration.full_name,
@@ -389,14 +382,35 @@ export const verifyRegistrationToken = async (rawToken) => {
     };
   });
 
-  // If newly verified, dispatch confirmation email
-  if (!result.alreadyVerified) {
-    await sendConfirmationEmail({
-      to: result.registration.email,
-      fullName: result.registration.full_name,
-      eventTitle: result.registration.eventTitle,
-    });
+  return result;
+};
+
+/**
+ * Dispatch Pass Card PNG & PDF directly to user's email
+ */
+export const dispatchPassEmail = async ({
+  email,
+  fullName,
+  eventTitle = 'Beyond the Screen',
+  passId,
+  pokemonName,
+  imageDataUrl,
+  pdfDataUrl,
+}) => {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    const err = new Error('Email is required');
+    err.statusCode = 400;
+    throw err;
   }
 
-  return result;
+  return await sendPassEmail({
+    to: normalizedEmail,
+    fullName: fullName ? fullName.trim() : 'Trainer',
+    eventTitle,
+    passId,
+    pokemonName,
+    imageDataUrl,
+    pdfDataUrl,
+  });
 };

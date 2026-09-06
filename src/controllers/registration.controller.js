@@ -24,3 +24,19 @@ export const verifyToken = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, message, result.registration, 200);
 });
+
+export const sendCardEmail = asyncHandler(async (req, res) => {
+  const { email, fullName, eventTitle, passId, pokemonName, imageDataUrl, pdfDataUrl } = req.body;
+  const result = await registrationService.dispatchPassEmail({
+    email,
+    fullName,
+    eventTitle,
+    passId,
+    pokemonName,
+    imageDataUrl,
+    pdfDataUrl,
+  });
+
+  return ApiResponse.success(res, 'Trainer pass and card successfully emailed to user', result, 200);
+});
+

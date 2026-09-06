@@ -145,6 +145,27 @@ export const query = async (text, params) => {
       return { rows: existing, rowCount: existing.length };
     }
 
+    if (sql.includes('WHERE r.verification_token_hash = $1') || sql.includes('verification_token_hash = $1')) {
+      const targetHash = params[0];
+      const match = dbStore.registrations.filter(r => r.verification_token_hash === targetHash);
+      return { rows: match, rowCount: match.length };
+    }
+
+    if (sql.startsWith('UPDATE registrations')) {
+      const targetId = params[params.length - 1];
+      const idx = dbStore.registrations.findIndex(r => r.id === targetId);
+      if (idx !== -1) {
+        dbStore.registrations[idx] = {
+          ...dbStore.registrations[idx],
+          status: 'VERIFIED',
+          verified_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return { rows: [dbStore.registrations[idx]], rowCount: 1 };
+      }
+      return { rows: [{ id: targetId, status: 'VERIFIED' }], rowCount: 1 };
+    }
+
     if (sql.includes('COUNT(*)')) {
       const count = dbStore.registrations.filter(r => r.status === 'VERIFIED').length;
       return { rows: [{ count: count.toString() }], rowCount: 1 };
