@@ -14,6 +14,12 @@ export const googleLogin = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, 'Authentication successful', authData, 200);
 });
 
+export const directLogin = asyncHandler(async (req, res) => {
+  const { email, name } = req.body || {};
+  const authData = await authService.directAdminLogin({ email, name });
+  return ApiResponse.success(res, 'Admin authentication successful', authData, 200);
+});
+
 export const getMe = asyncHandler(async (req, res) => {
   const userProfile = await authService.getUserProfile(req.user.id);
 

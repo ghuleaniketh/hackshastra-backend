@@ -10,7 +10,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000', 10),
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   DATABASE_URL: process.env.DATABASE_URL || '',
   VERIFICATION_TOKEN_EXPIRES_HOURS: parseInt(process.env.VERIFICATION_TOKEN_EXPIRES_HOURS || '24', 10),
   SMTP_HOST: process.env.SMTP_HOST || '',

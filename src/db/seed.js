@@ -9,6 +9,7 @@ export const seedDatabase = async () => {
     await query(`
       INSERT INTO events (title, slug, description, event_type, start_date, end_date, location, capacity, status)
       VALUES 
+        ('Beyond the Screen', 'beyond-the-screen', 'Interactive collectible-card registration experience & arena showcase.', 'WORKSHOP', '2026-09-16 14:30:00+05:30', '2026-09-16 17:30:00+05:30', 'CV 402', 300, 'PUBLISHED'),
         ('HackShastra National Hackathon 2026', 'hackshastra-national-2026', 'India Premier 36-Hour Student Hackathon & Innovation Codefest at SRM University-AP', 'HACKATHON', NOW() + INTERVAL '30 days', NOW() + INTERVAL '32 days', 'SRM University-AP, Amaravati', 500, 'PUBLISHED'),
         ('AI & Web3 Innovation Bootcamp', 'ai-web3-bootcamp-2026', 'Hands-on Masterclasses, Live Project Build Sessions & Industry Creator Mentorship', 'WORKSHOP', NOW() + INTERVAL '14 days', NOW() + INTERVAL '15 days', 'SRM AP Central Auditorium', 250, 'PUBLISHED')
       ON CONFLICT (slug) DO NOTHING;

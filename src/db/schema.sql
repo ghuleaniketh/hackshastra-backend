@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS registrations (
   college VARCHAR(255),
   organization VARCHAR(255),
   year VARCHAR(50),
+  student_id VARCHAR(100),
+  gender VARCHAR(50),
+  department VARCHAR(150),
+  favourite_pokemon VARCHAR(50),
+  participation_interest VARCHAR(30),
   additional_information TEXT,
   status VARCHAR(50) NOT NULL DEFAULT 'PENDING_VERIFICATION',
   verification_token_hash VARCHAR(255),
@@ -68,6 +73,20 @@ CREATE TABLE IF NOT EXISTS registrations (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_registrations_event_email UNIQUE (event_id, email)
 );
+
+-- Schema migrations for existing databases
+DO $$
+BEGIN
+  BEGIN
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS student_id VARCHAR(100);
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender VARCHAR(50);
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS department VARCHAR(150);
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS favourite_pokemon VARCHAR(50);
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS participation_interest VARCHAR(30);
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END $$;
 
 -- 6. Blog Table
 CREATE TABLE IF NOT EXISTS blogs (

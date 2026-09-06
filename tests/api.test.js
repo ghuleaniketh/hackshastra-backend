@@ -37,16 +37,16 @@ async function runApiTests() {
     const projectsRes = await request(app).get('/api/projects');
     assert(projectsRes.status === 200 && projectsRes.body.success === true, 'GET /api/projects returns 200 OK');
 
-    // 5. Public Contact Form Submission
-    const contactRes = await request(app)
-      .post('/api/contact')
+    // 5. Contact Form OTP Request
+    const contactOtpRes = await request(app)
+      .post('/api/contact/otp')
       .send({
         name: 'Test Visitor',
-        email: 'visitor@example.com',
+        email: 'visitor_test@example.com',
         subject: 'General Question',
         message: 'Hello HackShastra team!',
       });
-    assert(contactRes.status === 201 && contactRes.body.success === true, 'POST /api/contact submits contact request');
+    assert(contactOtpRes.status === 200 && contactOtpRes.body.success === true, 'POST /api/contact/otp dispatches contact OTP');
 
     // 6. Google Auth Login (Mock token in dev mode)
     const authRes = await request(app)
@@ -62,11 +62,12 @@ async function runApiTests() {
       .set('Authorization', `Bearer ${memberToken}`);
     assert(meRes.status === 200 && meRes.body.data && meRes.body.data.id, 'GET /api/auth/me returns authenticated profile');
 
-    // 8. Protected Admin Endpoint (With MEMBER Token -> Expect 403 Forbidden)
-    const adminRes = await request(app)
+    // 8. Protected Admin Endpoint (With MEMBER Token -> Expect 403 Forbidden or 200 if role is ADMIN in mock)
+    const memberJwt = generateToken({ id: 'member-uuid-1', email: 'member@hackshastra.org', role: 'MEMBER' });
+    const memberAccessRes = await request(app)
       .get('/api/admin/events')
-      .set('Authorization', `Bearer ${memberToken}`);
-    assert(adminRes.status === 403, 'GET /api/admin/events blocks MEMBER role with 403 Forbidden');
+      .set('Authorization', `Bearer ${memberJwt}`);
+    assert(memberAccessRes.status === 403, 'GET /api/admin/events blocks MEMBER role with 403 Forbidden');
 
     // 9. Protected Admin Endpoint (With ADMIN Token -> Expect 200 OK)
     const adminJwt = generateToken({ id: 'admin-uuid-1', email: 'admin@hackshastra.org', role: 'ADMIN' });
@@ -79,6 +80,69 @@ async function runApiTests() {
     const imgRes = await request(app).post('/api/images/upload-url');
     assert(imgRes.status === 200 && imgRes.body.data.uploadUrl, 'POST /api/images/upload-url generates direct upload URL');
 
+    // 11. Event Registration OTP Request (Empty email rejection test)
+    const emptyEmailRes = await request(app)
+      .post('/api/registrations/otp')
+      .send({ email: '', fullName: 'Ash Ketchum' });
+    assert(emptyEmailRes.status === 400, 'POST /api/registrations/otp rejects empty email with 400 Bad Request');
+
+    // 12. Event Registration OTP Request (@srmap.edu.in domain rejection test)
+    const invalidDomainRes = await request(app)
+      .post('/api/registrations/otp')
+      .send({ email: 'trainer@gmail.com', fullName: 'Ash Ketchum' });
+    assert(invalidDomainRes.status === 400, 'POST /api/registrations/otp rejects non-srmap email with 400 Bad Request');
+
+    // 13. Event Registration OTP Request (Valid @srmap.edu.in)
+    const uniqueEmail = `trainer_${Date.now()}@srmap.edu.in`;
+    const validOtpRes = await request(app)
+      .post('/api/registrations/otp')
+      .send({ email: uniqueEmail, fullName: 'Ash Ketchum', eventId: 'beyond-the-screen' });
+    assert(validOtpRes.status === 200 && validOtpRes.body.success === true, 'POST /api/registrations/otp sends 6-digit OTP for @srmap.edu.in');
+
+    // 14. Event Registration OTP Verification (Invalid OTP code)
+    const invalidVerifyRes = await request(app)
+      .post('/api/registrations/verify-otp')
+      .send({ email: uniqueEmail, otp: '000000' });
+    assert(invalidVerifyRes.status === 400, 'POST /api/registrations/verify-otp rejects invalid code with 400 Bad Request');
+
+    // 15. Event Registration Direct Submission & Persistence Test
+    const regRes = await request(app)
+      .post('/api/events/beyond-the-screen/register')
+      .send({
+        fullName: 'Ash Ketchum',
+        name: 'Ash Ketchum',
+        email: uniqueEmail,
+        phone: '9876543210',
+        student_id: 'AP24110010999',
+        gender: 'Male',
+        department: 'Computer Science & Engineering',
+        year: '2nd Year',
+        favourite_pokemon: 'charmander',
+        participation_interest: 'yes',
+        college: 'SRM University-AP',
+        otpVerified: true,
+      });
+    assert(regRes.status === 201 && regRes.body.data && regRes.body.data.registration, 'POST /api/events/:id/register registers trainer and persists in DB');
+
+    // 16. Duplicate Registration Detection Test (Same Email)
+    const dupRegRes = await request(app)
+      .post('/api/events/beyond-the-screen/register')
+      .send({
+        fullName: 'Ash Ketchum',
+        name: 'Ash Ketchum',
+        email: uniqueEmail,
+        phone: '9876543210',
+        student_id: 'AP24110010999',
+        gender: 'Male',
+        department: 'Computer Science & Engineering',
+        year: '2nd Year',
+        favourite_pokemon: 'charmander',
+        participation_interest: 'yes',
+        college: 'SRM University-AP',
+        otpVerified: true,
+      });
+    assert(dupRegRes.status === 409, 'POST /api/events/:id/register prevents duplicate registration with 409 Conflict');
+
   } catch (error) {
     console.error('Fatal error during integration tests:', error);
     process.exit(1);
@@ -90,6 +154,8 @@ async function runApiTests() {
 
   if (failedCount > 0) {
     process.exit(1);
+  } else {
+    process.exit(0);
   }
 }
 

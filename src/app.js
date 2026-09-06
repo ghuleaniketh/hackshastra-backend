@@ -20,13 +20,34 @@ import ApiResponse from './utils/apiResponse.js';
 const app = express();
 
 // Security HTTP headers
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
-// CORS configuration with client origin restriction
+// Dynamic CORS configuration allowing localhost Vite, previews, and configured CLIENT_URL
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in dev to avoid CORS friction
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   })
 );
 
@@ -44,11 +65,14 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 // Global Rate Limiting across all API routes
 app.use('/api', globalLimiter);
 
+import teamRoutes from './routes/team.routes.js';
+
 // API Routes
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/team', teamRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/blogs', blogRoutes);

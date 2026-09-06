@@ -15,6 +15,8 @@ import {
   deleteAdminProject,
   getAdminContactRequests,
   updateAdminContactStatus,
+  getAdminTeam,
+  updateAdminTeam,
   getAdminSiteContents,
   getAdminSiteContentByKey,
   updateAdminSiteContent,
@@ -46,6 +48,10 @@ router.delete('/projects/:id', deleteAdminProject);
 // Contact Requests
 router.get('/contact', getAdminContactRequests);
 router.put('/contact/:id', updateAdminContactStatus);
+
+// Team Management
+router.get('/team', getAdminTeam);
+router.put('/team', updateAdminTeam);
 
 // No-Code Site Content Management
 router.get('/content', getAdminSiteContents);

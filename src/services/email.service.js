@@ -97,6 +97,54 @@ export const sendConfirmationEmail = async ({ to, fullName, eventTitle }) => {
 };
 
 /**
+ * Send 6-digit verification OTP email to contact sender
+ */
+export const sendContactOtpEmail = async ({ to, otp }) => {
+  try {
+    const activeTransporter = createTransporter();
+    const mailOptions = {
+      from: env.MAIL_FROM,
+      to,
+      subject: `${otp} is your HackShastra Verification Code`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 8px; background-color: #FFFFFF;">
+          <div style="margin-bottom: 20px;">
+            <h2 style="color: #0DA5F0; margin: 0; font-size: 20px; font-weight: bold;">HACKSHASTRA SRM-AP</h2>
+            <span style="color: #64748B; font-size: 12px; text-transform: uppercase;">Security Verification</span>
+          </div>
+          
+          <p style="color: #334155; font-size: 14px; line-height: 1.5;">
+            You are sending a contact message to the HackShastra community. Please use the following One-Time Password (OTP) to verify your email address:
+          </p>
+
+          <div style="margin: 28px 0; text-align: center;">
+            <div style="display: inline-block; background-color: #F8FAFC; border: 2px dashed #0DA5F0; border-radius: 6px; padding: 14px 28px; font-size: 28px; font-weight: bold; letter-spacing: 8px; color: #090D12; font-family: monospace;">
+              ${otp}
+            </div>
+          </div>
+
+          <p style="color: #64748B; font-size: 12px; line-height: 1.4;">
+            ⏱ This OTP is valid for <strong>10 minutes</strong>. If you did not request this verification, please safely ignore this email.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0 16px 0;" />
+          <p style="font-size: 11px; color: #94A3B8; margin: 0;">
+            © ${new Date().getFullYear()} HackShastra SRM-AP Chapter • Secure Dispatch System
+          </p>
+        </div>
+      `,
+    };
+
+    const info = await activeTransporter.sendMail(mailOptions);
+    logger.info(`Contact OTP email dispatched to ${to}`, { messageId: info.messageId });
+    return info;
+  } catch (error) {
+    logger.error(`Failed to send contact OTP to ${to}:`, error);
+    throw error;
+  }
+};
+
+/**
  * Send contact notification to community admins
  */
 export const sendContactNotification = async ({ name, email, subject, message }) => {
@@ -127,3 +175,62 @@ export const sendContactNotification = async ({ name, email, subject, message })
     return null;
   }
 };
+
+/**
+ * Send 6-digit verification OTP email for Event Registration (Pokemon / Beyond the Screen theme)
+ */
+export const sendRegistrationOtpEmail = async ({ to, fullName, otp, eventTitle = 'Beyond the Screen' }) => {
+  try {
+    const activeTransporter = createTransporter();
+    const mailOptions = {
+      from: env.MAIL_FROM,
+      to,
+      subject: `[${otp}] Your Trainer Verification Code for ${eventTitle} — HackShastra`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 2px solid #EF4444; border-radius: 12px; background-color: #0A0F14; color: #FFFFFF;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background-color: #DC2626; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 4px 14px; border-radius: 20px; letter-spacing: 2px; text-transform: uppercase;">
+              POKÉDEX V2.4 SECURITY
+            </div>
+            <h2 style="color: #F59E0B; margin: 12px 0 4px 0; font-size: 22px; font-weight: bold; text-transform: uppercase;">
+              ${eventTitle}
+            </h2>
+            <p style="color: #94A3B8; font-size: 12px; margin: 0; text-transform: uppercase; letter-spacing: 1px;">
+              SRM University-AP Trainer Pass Verification
+            </p>
+          </div>
+          
+          <p style="color: #E2E8F0; font-size: 14px; line-height: 1.6;">
+            Trainer ${fullName ? `<strong>${fullName}</strong>` : ''},
+          </p>
+          <p style="color: #CBD5E1; font-size: 14px; line-height: 1.6;">
+            Your Pokédex requested an authentication sync code to lock in your Trainer Card and starter companion for <strong>${eventTitle}</strong>. Enter the 6-digit code below into your Pokédex terminal:
+          </p>
+
+          <div style="margin: 28px 0; text-align: center;">
+            <div style="display: inline-block; background-color: #1E293B; border: 2px solid #F59E0B; border-radius: 8px; padding: 14px 28px; font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #FDE68A; font-family: monospace; box-shadow: 0 0 20px rgba(245,158,11,0.25);">
+              ${otp}
+            </div>
+          </div>
+
+          <p style="color: #94A3B8; font-size: 12px; line-height: 1.4; text-align: center;">
+            ⏱ This Trainer OTP is valid for <strong>10 minutes</strong>. Do not share this code with rival Trainers.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.15); margin: 24px 0 16px 0;" />
+          <p style="font-size: 11px; color: #64748B; margin: 0; text-align: center;">
+            © ${new Date().getFullYear()} HackShastra SRM-AP Chapter • Arena Operations
+          </p>
+        </div>
+      `,
+    };
+
+    const info = await activeTransporter.sendMail(mailOptions);
+    logger.info(`Registration OTP email dispatched to ${to}`, { messageId: info.messageId });
+    return info;
+  } catch (error) {
+    logger.error(`Failed to send registration OTP to ${to}:`, error);
+    throw error;
+  }
+};
+

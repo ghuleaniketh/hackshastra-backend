@@ -4,7 +4,8 @@ import ApiResponse from '../utils/apiResponse.js';
  * Validate registration request body
  */
 export const validateRegistrationInput = (req, res, next) => {
-  const { fullName, email } = req.body || {};
+  const fullName = req.body?.fullName || req.body?.name;
+  const email = req.body?.email;
   const errors = [];
 
   if (!fullName || typeof fullName !== 'string' || !fullName.trim()) {
@@ -18,6 +19,8 @@ export const validateRegistrationInput = (req, res, next) => {
     errors.push('Email address is required');
   } else if (!emailRegex.test(email.trim())) {
     errors.push('Please provide a valid email address');
+  } else if (!email.trim().toLowerCase().endsWith('@srmap.edu.in')) {
+    errors.push('Registration is exclusive to SRM University-AP students. Please use your official @srmap.edu.in email address.');
   }
 
   if (errors.length > 0) {

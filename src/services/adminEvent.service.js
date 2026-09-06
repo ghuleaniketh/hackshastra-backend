@@ -179,12 +179,12 @@ export const deleteEvent = async (id) => {
   return true;
 };
 
-export const getEventRegistrations = async (eventId, { page = 1, limit = 50, status } = {}) => {
+export const getEventRegistrations = async (eventId, { page = 1, limit = 50, status, favouritePokemon, participationInterest, search } = {}) => {
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10)));
   const offset = (pageNum - 1) * limitNum;
 
-  const whereConditions = ['r.event_id = $1'];
+  const whereConditions = ['(r.event_id::text = $1 OR e.slug = $1)'];
   const queryParams = [eventId];
   let paramIdx = 2;
 
@@ -194,17 +194,43 @@ export const getEventRegistrations = async (eventId, { page = 1, limit = 50, sta
     paramIdx++;
   }
 
+  if (favouritePokemon) {
+    whereConditions.push(`r.favourite_pokemon ILIKE $${paramIdx}`);
+    queryParams.push(favouritePokemon);
+    paramIdx++;
+  }
+
+  if (participationInterest) {
+    whereConditions.push(`r.participation_interest = $${paramIdx}`);
+    queryParams.push(participationInterest);
+    paramIdx++;
+  }
+
+  if (search) {
+    whereConditions.push(`(r.full_name ILIKE $${paramIdx} OR r.email ILIKE $${paramIdx} OR r.student_id ILIKE $${paramIdx})`);
+    queryParams.push(`%${search}%`);
+    paramIdx++;
+  }
+
   const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
 
-  const countSql = `SELECT COUNT(*) FROM registrations r ${whereClause}`;
+  const countSql = `
+    SELECT COUNT(*) 
+    FROM registrations r 
+    JOIN events e ON r.event_id = e.id 
+    ${whereClause}
+  `;
   const countResult = await query(countSql, queryParams);
-  const totalItems = parseInt(countResult.rows[0].count, 10);
+  const totalItems = parseInt(countResult.rows[0]?.count || 0, 10);
 
   const sql = `
     SELECT 
       r.id, r.event_id, r.full_name, r.email, r.phone, r.college, r.organization, r.year,
-      r.additional_information, r.status, r.verified_at, r.created_at
+      r.student_id, r.gender, r.department, r.favourite_pokemon, r.participation_interest,
+      r.additional_information, r.status, r.verified_at, r.created_at,
+      e.title AS event_title, e.slug AS event_slug
     FROM registrations r
+    JOIN events e ON r.event_id = e.id
     ${whereClause}
     ORDER BY r.created_at DESC
     LIMIT $${paramIdx} OFFSET $${paramIdx + 1}

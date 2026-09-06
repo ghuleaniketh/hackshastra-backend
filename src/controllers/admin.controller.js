@@ -5,6 +5,7 @@ import * as adminBlogService from '../services/adminBlog.service.js';
 import * as adminProjectService from '../services/adminProject.service.js';
 import * as adminContactService from '../services/adminContact.service.js';
 import * as adminContentService from '../services/adminContent.service.js';
+import * as adminTeamService from '../services/adminTeam.service.js';
 
 // --- Event Management ---
 export const getAdminEvents = asyncHandler(async (req, res) => {
@@ -87,6 +88,17 @@ export const updateAdminContactStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
   const contact = await adminContactService.updateContactStatus(id, status);
   return ApiResponse.success(res, 'Contact request status updated successfully', contact, 200);
+});
+
+// --- Team Directory Management ---
+export const getAdminTeam = asyncHandler(async (req, res) => {
+  const team = await adminTeamService.getTeamDirectory();
+  return ApiResponse.success(res, 'Team directory retrieved successfully', team, 200);
+});
+
+export const updateAdminTeam = asyncHandler(async (req, res) => {
+  const team = await adminTeamService.updateTeamDirectory(req.body, req.user?.id);
+  return ApiResponse.success(res, 'Team directory updated successfully', team, 200);
 });
 
 // --- No-Code Website Content Management ---
