@@ -96,7 +96,49 @@ export const dispatchMail = async ({ to, subject, html, attachments = [] }) => {
     }
   }
 
-  // 2. SMTP Transport Fallback
+  // 2. Preferred Gmail/Universal Cloud Delivery: Brevo HTTPS API (Works on Railway, supports @gmail.com)
+  if (env.BREVO_API_KEY) {
+    try {
+      const brevoPayload = {
+        sender: {
+          name: 'HackShastra',
+          email: env.SMTP_USER || 'supporthackshastra@gmail.com',
+        },
+        to: (Array.isArray(to) ? to : [to]).map((email) => ({ email })),
+        subject,
+        htmlContent: html,
+      };
+
+      if (attachments && attachments.length > 0) {
+        brevoPayload.attachment = attachments.map((att) => ({
+          name: att.filename,
+          content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content,
+        }));
+      }
+
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify(brevoPayload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        logger.error('Brevo API returned error response:', data);
+      } else {
+        logger.info(`Email successfully dispatched via Brevo HTTPS API to ${to}`, { messageId: data.messageId });
+        return { success: true, messageId: data.messageId, provider: 'brevo' };
+      }
+    } catch (brevoErr) {
+      logger.error('Brevo HTTPS dispatch failed:', brevoErr);
+    }
+  }
+
+  // 3. SMTP Transport Fallback
   try {
     const activeTransporter = createTransporter();
     const info = await activeTransporter.sendMail({

@@ -88,8 +88,8 @@ export const query = async (text, params) => {
   // --- Realtime Stateful Dynamic Engine ---
   const sql = text.trim();
 
-  // 1. Registrations Queries (checked first so queries with JOIN events are handled here)
-  if (sql.includes('registrations')) {
+  // 1. Registrations Queries (only when events is not the primary table)
+  if (sql.includes('registrations') && !sql.startsWith('SELECT e.') && !sql.includes('FROM events')) {
     if (sql.startsWith('INSERT INTO registrations')) {
       const newReg = {
         id: 'reg_' + Date.now(),
@@ -113,35 +113,38 @@ export const query = async (text, params) => {
       dbStore.registrations.unshift(newReg);
 
       if (supabaseClient) {
-        const targetEventId = (params[0] === 'beyond-the-screen' || !params[0] || typeof params[0] === 'string' && !params[0].includes('-'))
+        const targetEventId = (params[0] === 'beyond-the-screen' || !params[0] || (typeof params[0] === 'string' && !params[0].includes('-')))
           ? 'e8804317-161d-4b5e-991f-ef8924beff62'
           : params[0];
 
-        supabaseClient.from('registrations').insert([{
-          event_id: targetEventId,
-          full_name: params[1],
-          email: params[2],
-          phone: params[3] || null,
-          college: params[4] || 'SRM University-AP',
-          organization: params[5] || null,
-          year: params[6] || null,
-          student_id: params[7] || null,
-          gender: params[8] || null,
-          department: params[9] || null,
-          favourite_pokemon: params[10] || null,
-          participation_interest: params[11] || null,
-          additional_information: params[12] || null,
-          status: params[13] || 'VERIFIED',
-          verified_at: params[16] || new Date().toISOString(),
-        }]).then(({ data, error }) => {
+        try {
+          const { data, error } = await supabaseClient.from('registrations').insert([{
+            event_id: targetEventId,
+            full_name: params[1],
+            email: params[2],
+            phone: params[3] || null,
+            college: params[4] || 'SRM University-AP',
+            organization: params[5] || null,
+            year: params[6] || null,
+            student_id: params[7] || null,
+            gender: params[8] || null,
+            department: params[9] || null,
+            favourite_pokemon: params[10] || null,
+            participation_interest: params[11] || null,
+            additional_information: params[12] || null,
+            status: params[13] || 'VERIFIED',
+            verified_at: params[16] || new Date().toISOString(),
+          }]).select();
+
           if (error) {
             logger.warn('Supabase REST sync notice:', error.message);
-          } else {
-            logger.info('🎉 Successfully saved registration to live Supabase PostgreSQL table!', data);
+          } else if (data && data[0]) {
+            logger.info('🎉 Successfully saved registration to live Supabase PostgreSQL table!', data[0].id);
+            newReg.id = data[0].id;
           }
-        }).catch((err) => {
+        } catch (err) {
           logger.warn('Supabase REST sync exception:', err.message);
-        });
+        }
       }
 
       return { rows: [newReg], rowCount: 1 };
@@ -149,6 +152,16 @@ export const query = async (text, params) => {
 
     if (sql.includes('r.email = $2') || sql.includes('email = $2') || sql.includes('WHERE event_id = $1 AND email = $2')) {
       const targetEmail = (params[1] || '').toLowerCase();
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('registrations').select('id, status, email').eq('email', targetEmail);
+          if (!error && data && data.length > 0) {
+            return { rows: data, rowCount: data.length };
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
       const existing = dbStore.registrations.filter(
         (r) => r.email.toLowerCase() === targetEmail
       );
@@ -229,6 +242,21 @@ export const query = async (text, params) => {
 
     if (params && params[0]) {
       const paramVal = params[0].toString();
+      if (supabaseClient) {
+        try {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paramVal);
+          const queryBuilder = supabaseClient.from('events').select('*');
+          const { data, error } = isUuid 
+            ? await queryBuilder.eq('id', paramVal)
+            : await queryBuilder.eq('slug', paramVal);
+
+          if (!error && data && data.length > 0) {
+            return { rows: data, rowCount: data.length };
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
       const matched = dbStore.events.filter(e => e.id == paramVal || e.slug == paramVal);
       if (matched.length > 0) return { rows: matched, rowCount: matched.length };
     }

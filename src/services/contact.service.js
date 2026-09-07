@@ -50,7 +50,12 @@ export const requestContactOtp = async ({ email }) => {
     lastRequestedAt: Date.now(),
   });
 
-  await sendContactOtpEmail({ to: normalizedEmail, otp });
+  const mailResult = await sendContactOtpEmail({ to: normalizedEmail, otp });
+  if (mailResult && mailResult.success === false && mailResult.provider === 'none') {
+    const err = new Error(mailResult.error || 'Email service temporarily unavailable. Could not send OTP code.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   return {
     email: normalizedEmail,

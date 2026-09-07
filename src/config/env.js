@@ -20,6 +20,7 @@ const env = {
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || '',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  BREVO_API_KEY: process.env.BREVO_API_KEY || '',
   MAIL_FROM: process.env.MAIL_FROM || 'HackShastra <supporthackshastra@gmail.com>',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'hssc2025@srmap.edu.in',
   CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID || '',

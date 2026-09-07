@@ -75,12 +75,18 @@ export const requestRegistrationOtp = async ({ email, fullName, eventId = 'beyon
     verified: false,
   });
 
-  await sendRegistrationOtpEmail({
+  const mailResult = await sendRegistrationOtpEmail({
     to: normalizedEmail,
     fullName: fullName ? fullName.trim() : 'Trainer',
     otp,
     eventTitle: 'Beyond the Screen',
   });
+
+  if (mailResult && mailResult.success === false && mailResult.provider === 'none') {
+    const err = new Error(mailResult.error || 'Email delivery failed. Could not dispatch OTP verification code.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   return {
     email: normalizedEmail,
