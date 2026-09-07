@@ -7,18 +7,29 @@ let transporter = null;
 const createTransporter = () => {
   if (transporter) return transporter;
 
-  if (process.env.NODE_ENV !== 'test' && env.SMTP_HOST && env.SMTP_USER) {
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      },
-      connectionTimeout: 5000,
-    });
-    logger.info('Nodemailer SMTP transporter initialized');
+  if (process.env.NODE_ENV !== 'test' && env.SMTP_USER && env.SMTP_PASS) {
+    if (env.SMTP_HOST.includes('gmail') || env.SMTP_USER.includes('gmail')) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: env.SMTP_USER,
+          pass: env.SMTP_PASS,
+        },
+      });
+      logger.info('Nodemailer Gmail transporter initialized');
+    } else if (env.SMTP_HOST) {
+      transporter = nodemailer.createTransport({
+        host: env.SMTP_HOST,
+        port: env.SMTP_PORT,
+        secure: env.SMTP_PORT === 465,
+        auth: {
+          user: env.SMTP_USER,
+          pass: env.SMTP_PASS,
+        },
+        connectionTimeout: 8000,
+      });
+      logger.info('Nodemailer SMTP transporter initialized');
+    }
   } else {
     logger.warn('Using JSON stream transporter for development/testing.');
     transporter = nodemailer.createTransport({
