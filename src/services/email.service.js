@@ -7,7 +7,7 @@ let transporter = null;
 const createTransporter = () => {
   if (transporter) return transporter;
 
-  if (env.SMTP_HOST && env.SMTP_USER) {
+  if (process.env.NODE_ENV !== 'test' && env.SMTP_HOST && env.SMTP_USER) {
     transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
@@ -16,10 +16,11 @@ const createTransporter = () => {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
       },
+      connectionTimeout: 5000,
     });
     logger.info('Nodemailer SMTP transporter initialized');
   } else {
-    logger.warn('SMTP settings not configured. Falling back to JSON stream transporter (console logging).');
+    logger.warn('Using JSON stream transporter for development/testing.');
     transporter = nodemailer.createTransport({
       jsonTransport: true,
     });

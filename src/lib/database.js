@@ -1,12 +1,19 @@
 
 
 import pg from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
 
 const { Pool } = pg;
 
 let pool = null;
+export let supabaseClient = null;
+
+if (env.SUPABASE_URL && env.SUPABASE_KEY) {
+  supabaseClient = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+  logger.info('Supabase REST client initialized successfully.');
+}
 
 if (env.DATABASE_URL) {
   pool = new Pool({
@@ -34,36 +41,6 @@ export const dbStore = {
       start_date: '2026-09-16T14:30:00.000Z',
       end_date: '2026-09-16T17:30:00.000Z',
       location: 'CV 402, SRM University-AP',
-      registration_enabled: true,
-      capacity: 300,
-      verified_registrations_count: 0,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '1',
-      title: 'HackShastra National Hackathon 2026',
-      slug: 'hackshastra-national-hackathon-2026',
-      description: "India's Premier 36-Hour Student Hackathon & Innovation Codefest",
-      event_type: 'HACKATHON',
-      status: 'PUBLISHED',
-      start_date: '2026-04-15T09:00:00.000Z',
-      end_date: '2026-04-17T18:00:00.000Z',
-      location: 'SRM University-AP',
-      registration_enabled: true,
-      capacity: 500,
-      verified_registrations_count: 0,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      title: 'AI & Web3 Innovation Bootcamp 2026',
-      slug: 'ai-web3-innovation-bootcamp-2026',
-      description: 'Hands-on Masterclasses, Live Project Build Sessions & Industry Creator Mentorship',
-      event_type: 'WORKSHOP',
-      status: 'PUBLISHED',
-      start_date: '2026-05-10T10:00:00.000Z',
-      end_date: '2026-05-12T17:00:00.000Z',
-      location: 'SRM University-AP',
       registration_enabled: true,
       capacity: 300,
       verified_registrations_count: 0,
@@ -134,6 +111,39 @@ export const query = async (text, params) => {
         created_at: new Date().toISOString(),
       };
       dbStore.registrations.unshift(newReg);
+
+      if (supabaseClient) {
+        const targetEventId = (params[0] === 'beyond-the-screen' || !params[0] || typeof params[0] === 'string' && !params[0].includes('-'))
+          ? 'e8804317-161d-4b5e-991f-ef8924beff62'
+          : params[0];
+
+        supabaseClient.from('registrations').insert([{
+          event_id: targetEventId,
+          full_name: params[1],
+          email: params[2],
+          phone: params[3] || null,
+          college: params[4] || 'SRM University-AP',
+          organization: params[5] || null,
+          year: params[6] || null,
+          student_id: params[7] || null,
+          gender: params[8] || null,
+          department: params[9] || null,
+          favourite_pokemon: params[10] || null,
+          participation_interest: params[11] || null,
+          additional_information: params[12] || null,
+          status: params[13] || 'VERIFIED',
+          verified_at: params[16] || new Date().toISOString(),
+        }]).then(({ data, error }) => {
+          if (error) {
+            logger.warn('Supabase REST sync notice:', error.message);
+          } else {
+            logger.info('🎉 Successfully saved registration to live Supabase PostgreSQL table!', data);
+          }
+        }).catch((err) => {
+          logger.warn('Supabase REST sync exception:', err.message);
+        });
+      }
+
       return { rows: [newReg], rowCount: 1 };
     }
 
@@ -306,8 +316,7 @@ export const query = async (text, params) => {
     const requestedParam = (params?.[0] || '').toString().toLowerCase();
     const isAuthorized = 
       requestedParam.startsWith('admin-') ||
-      env.INITIAL_ADMIN_EMAILS.some(e => e.toLowerCase() === requestedParam) || 
-      requestedParam.endsWith('@srmap.edu.in');
+      env.INITIAL_ADMIN_EMAILS.some(e => e.toLowerCase() === requestedParam);
 
     if (sql.includes('INSERT') || isAuthorized) {
       return {

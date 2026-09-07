@@ -110,7 +110,7 @@ export const directAdminLogin = async ({ email, name }) => {
     }
   } else {
     // Only create admin account if explicitly listed in admin whitelist
-    if (!isEnvAdmin && !normalizedEmail.endsWith('@srmap.edu.in')) {
+    if (!isEnvAdmin) {
       const err = new Error(`Access restricted. Email ${normalizedEmail} is not registered in the administrator database.`);
       err.statusCode = 403;
       throw err;

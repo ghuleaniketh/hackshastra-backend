@@ -32,8 +32,8 @@ export const requestRegistrationOtp = async ({ email, fullName, eventId = 'beyon
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Enforce @srmap.edu.in domain in production
-  if (process.env.NODE_ENV === 'production' && !normalizedEmail.endsWith('@srmap.edu.in')) {
+  // Enforce @srmap.edu.in domain
+  if (!normalizedEmail.endsWith('@srmap.edu.in')) {
     const err = new Error('Registration is exclusive to SRM University-AP students. Email must end with @srmap.edu.in');
     err.statusCode = 400;
     throw err;
@@ -148,8 +148,8 @@ export const verifyRegistrationOtp = async ({ email, otp }) => {
 export const registerParticipant = async (eventId, registrationData) => {
   const normalizedEmail = (registrationData.email || '').trim().toLowerCase();
 
-  // Enforce @srmap.edu.in domain in production
-  if (process.env.NODE_ENV === 'production' && !normalizedEmail.endsWith('@srmap.edu.in')) {
+  // Enforce @srmap.edu.in domain
+  if (!normalizedEmail.endsWith('@srmap.edu.in')) {
     const err = new Error('Registration is exclusive to SRM University-AP students. Email must end with @srmap.edu.in');
     err.statusCode = 400;
     throw err;
