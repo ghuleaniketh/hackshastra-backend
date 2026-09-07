@@ -10,18 +10,22 @@ const createTransporter = () => {
   if (process.env.NODE_ENV !== 'test' && env.SMTP_USER && env.SMTP_PASS) {
     if (env.SMTP_HOST.includes('gmail') || env.SMTP_USER.includes('gmail')) {
       transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        family: 4,
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
         },
       });
-      logger.info('Nodemailer Gmail transporter initialized');
+      logger.info('Nodemailer Gmail SSL transporter (IPv4) initialized');
     } else if (env.SMTP_HOST) {
       transporter = nodemailer.createTransport({
         host: env.SMTP_HOST,
         port: env.SMTP_PORT,
         secure: env.SMTP_PORT === 465,
+        family: 4,
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,

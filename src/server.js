@@ -1,6 +1,12 @@
+import dns from 'dns';
 import env from './config/env.js';
 import logger from './utils/logger.js';
 import app from './app.js';
+
+// Ensure Node.js prefers IPv4 (prevents ENETUNREACH on cloud environments like Railway)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const PORT = env.PORT;
 
