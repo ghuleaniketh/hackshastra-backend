@@ -33,6 +33,7 @@ const allowedOrigins = [
   'http://localhost:4173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
+  'https://hackshastra-backend-production-0f5c.up.railway.app',
   env.CLIENT_URL,
 ].filter(Boolean);
 
