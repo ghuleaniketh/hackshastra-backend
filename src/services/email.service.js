@@ -1,3 +1,4 @@
+import dns from 'dns';
 import nodemailer from 'nodemailer';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
@@ -8,24 +9,29 @@ const createTransporter = () => {
   if (transporter) return transporter;
 
   if (process.env.NODE_ENV !== 'test' && env.SMTP_USER && env.SMTP_PASS) {
+    // Custom IPv4 lookup resolver to prevent IPv6 ENETUNREACH in Docker / Railway containers
+    const ipv4Lookup = (hostname, options, callback) => {
+      dns.lookup(hostname, { family: 4 }, callback);
+    };
+
     if (env.SMTP_HOST.includes('gmail') || env.SMTP_USER.includes('gmail')) {
       transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
-        family: 4,
+        lookup: ipv4Lookup,
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
         },
       });
-      logger.info('Nodemailer Gmail SSL transporter (IPv4) initialized');
+      logger.info('Nodemailer Gmail SSL transporter (strict IPv4) initialized');
     } else if (env.SMTP_HOST) {
       transporter = nodemailer.createTransport({
         host: env.SMTP_HOST,
         port: env.SMTP_PORT,
         secure: env.SMTP_PORT === 465,
-        family: 4,
+        lookup: ipv4Lookup,
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
