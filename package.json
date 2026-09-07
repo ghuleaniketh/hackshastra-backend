@@ -9,12 +9,7 @@
     "db:init": "node src/db/init.js",
     "test": "node tests/api.test.js && node tests/concurrency.test.js"
   },
-  "keywords": [
-    "hackshastra",
-    "express",
-    "nodejs",
-    "backend"
-  ],
+  "keywords": ["hackshastra", "express", "nodejs", "backend"],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -35,5 +30,8 @@
   "devDependencies": {
     "nodemon": "^3.1.9",
     "supertest": "^7.2.2"
+  },
+  "overrides": {
+    "jose": "^4.15.9"
   }
 }
