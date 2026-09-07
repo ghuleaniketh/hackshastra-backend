@@ -199,8 +199,10 @@ export const sendPassEmail = async ({
 
   if (imageDataUrl && imageDataUrl.startsWith('data:image/')) {
     const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const isJpeg = imageDataUrl.includes('image/jpeg') || imageDataUrl.includes('image/jpg');
+    const ext = isJpeg ? 'jpg' : 'png';
     attachments.push({
-      filename: `${(fullName || 'Trainer').replace(/\s+/g, '_')}_Trainer_Card.png`,
+      filename: `${(fullName || 'Trainer').replace(/\s+/g, '_')}_Trainer_Card.${ext}`,
       content: Buffer.from(base64Data, 'base64'),
       cid: 'trainerCardImg',
     });
