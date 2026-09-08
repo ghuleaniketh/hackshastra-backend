@@ -58,8 +58,8 @@ const createTransporter = () => {
  * Universal mail dispatcher supporting Resend HTTPS API (never blocked on cloud) and SMTP fallback
  */
 export const dispatchMail = async ({ to, subject, html, attachments = [] }) => {
-  // 1. Preferred Cloud Delivery: Resend HTTPS API
-  if (env.RESEND_API_KEY) {
+  // 1. Preferred Cloud Delivery: Resend HTTPS API (only if valid production key is configured)
+  if (env.RESEND_API_KEY && !env.RESEND_API_KEY.includes('xxxx') && env.RESEND_API_KEY.startsWith('re_')) {
     try {
       const resendPayload = {
         from: env.MAIL_FROM || 'HackShastra <onboarding@resend.dev>',

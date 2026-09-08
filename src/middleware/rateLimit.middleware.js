@@ -14,24 +14,24 @@ const rateLimitHandler = (req, res, next, options) => {
 
 /**
  * Global rate limiter applied across all API endpoints
- * 100 requests per 15 minutes per IP
+ * Scaled for high-density campus networks (SRM University-AP)
  */
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
 });
 
 /**
- * Strict rate limiter for event registration
- * 10 registration requests per 15 minutes per IP
+ * Event registration limiter
+ * Scaled to 120 requests per 15 minutes to support shared campus Wi-Fi
  */
 export const registrationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: 'Too many registration requests. Please wait a few minutes before trying again.',
+  max: 120,
+  message: 'Too many registration requests from this network. Please wait a few minutes before trying again.',
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
