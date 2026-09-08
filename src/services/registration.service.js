@@ -427,10 +427,11 @@ export const verifyRegistrationToken = async (rawToken) => {
 };
 
 /**
- * Dispatch Pass Card PNG & PDF directly to user's email
+ * Dispatch Pass Card PNG & PDF directly to user's email (or regenerate server-side)
  */
 export const dispatchPassEmail = async ({
   email,
+  registrationId,
   fullName,
   eventTitle = 'Beyond the Screen',
   passId,
@@ -438,7 +439,37 @@ export const dispatchPassEmail = async ({
   imageDataUrl,
   pdfDataUrl,
 }) => {
-  const normalizedEmail = (email || '').trim().toLowerCase();
+  let normalizedEmail = (email || '').trim().toLowerCase();
+  let resolvedFullName = fullName ? fullName.trim() : '';
+  let resolvedPassId = passId || '';
+  let resolvedPokemon = pokemonName || '';
+  let resolvedEventTitle = eventTitle || 'Beyond the Screen';
+
+  // If email or other fields are missing, or if registrationId is provided, lookup from DB
+  if ((!normalizedEmail || !resolvedFullName || !resolvedPassId || !resolvedPokemon) && (registrationId || normalizedEmail)) {
+    try {
+      const regRes = await query(
+        `SELECT r.*, e.title as event_title 
+         FROM registrations r
+         LEFT JOIN events e ON r.event_id = e.id
+         WHERE ${registrationId ? 'r.id::text = $1' : 'r.email = $1'}
+         ORDER BY r.created_at DESC LIMIT 1`,
+        [registrationId ? String(registrationId) : normalizedEmail]
+      );
+
+      if (regRes.rows.length > 0) {
+        const reg = regRes.rows[0];
+        normalizedEmail = normalizedEmail || reg.email;
+        resolvedFullName = resolvedFullName || reg.full_name;
+        resolvedEventTitle = reg.event_title || resolvedEventTitle;
+        resolvedPassId = resolvedPassId || `BTS-${String(reg.id).slice(0, 8).toUpperCase()}`;
+        resolvedPokemon = resolvedPokemon || reg.favourite_pokemon || 'Starter Partner';
+      }
+    } catch (dbErr) {
+      logger.warn('[dispatchPassEmail] DB lookup fallback failed:', dbErr.message);
+    }
+  }
+
   if (!normalizedEmail) {
     const err = new Error('Email is required');
     err.statusCode = 400;
@@ -447,11 +478,12 @@ export const dispatchPassEmail = async ({
 
   return await sendPassEmail({
     to: normalizedEmail,
-    fullName: fullName ? fullName.trim() : 'Trainer',
-    eventTitle,
-    passId,
-    pokemonName,
+    fullName: resolvedFullName || 'Trainer',
+    eventTitle: resolvedEventTitle,
+    passId: resolvedPassId || (registrationId ? `BTS-${String(registrationId).slice(0, 8).toUpperCase()}` : 'BTS-CONFIRMED'),
+    pokemonName: resolvedPokemon || 'Starter Partner',
     imageDataUrl,
     pdfDataUrl,
   });
 };
+

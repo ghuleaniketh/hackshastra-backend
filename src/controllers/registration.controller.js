@@ -26,9 +26,10 @@ export const verifyToken = asyncHandler(async (req, res) => {
 });
 
 export const sendCardEmail = asyncHandler(async (req, res) => {
-  const { email, fullName, eventTitle, passId, pokemonName, imageDataUrl, pdfDataUrl } = req.body;
+  const { email, registrationId, fullName, eventTitle, passId, pokemonName, imageDataUrl, pdfDataUrl } = req.body;
   const result = await registrationService.dispatchPassEmail({
     email,
+    registrationId,
     fullName,
     eventTitle,
     passId,

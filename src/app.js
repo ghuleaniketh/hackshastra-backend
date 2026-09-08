@@ -60,9 +60,9 @@ if (env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Body parsers with request size limits (supports card PNG & PDF base64 payloads)
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+// Body parsers with request size limits (aligned with Vercel serverless request limits)
+app.use(express.json({ limit: '4mb' }));
+app.use(express.urlencoded({ extended: true, limit: '4mb' }));
 
 // Global Rate Limiting across all API routes
 app.use('/api', globalLimiter);
