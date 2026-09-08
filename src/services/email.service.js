@@ -216,6 +216,42 @@ export const sendPassEmail = async ({
     });
   }
 
+  const cleanPokemon = (pokemonName || '').toLowerCase().trim();
+  const POKEMON_META = {
+    squirtle: {
+      name: 'SQUIRTLE',
+      type: 'WATER // 007',
+      accent: '#1789E5',
+      badge: 'Tiny Turtle Pokémon • Hydro Cannon ready',
+      artwork: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png',
+    },
+    charmander: {
+      name: 'CHARMANDER',
+      type: 'FIRE // 004',
+      accent: '#F97316',
+      badge: 'Lizard Pokémon • Flamethrower ready',
+      artwork: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png',
+    },
+    bulbasaur: {
+      name: 'BULBASAUR',
+      type: 'GRASS // 001',
+      accent: '#65A30D',
+      badge: 'Seed Pokémon • Solar Beam ready',
+      artwork: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png',
+    },
+  };
+
+  const meta = POKEMON_META[cleanPokemon] || {
+    name: (pokemonName || 'STARTER PARTNER').toUpperCase(),
+    type: 'POKÉDEX // SYNCED',
+    accent: '#38BDF8',
+    badge: 'Official Companion Pokémon',
+    artwork: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+  };
+
+  const resolvedPassId = passId || 'BTS-CONFIRMED';
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`HACKSHASTRA-${resolvedPassId}-${cleanPokemon}`)}`;
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #0A0F14; border: 2px solid #38BDF8; border-radius: 16px; color: #FFFFFF;">
       <div style="text-align: center; margin-bottom: 24px;">
@@ -230,10 +266,10 @@ export const sendPassEmail = async ({
       <div style="background-color: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <h3 style="color: #38BDF8; margin: 0 0 12px 0; font-size: 16px;">Welcome aboard, Trainer ${fullName || 'Challenger'}!</h3>
         <p style="color: #CBD5E1; font-size: 14px; line-height: 1.6; margin: 0 0 12px 0;">
-          Your Pokédex registration has been confirmed! Your official partner Pokémon <strong>${pokemonName}</strong> is synchronized with your entry pass.
+          Your Pokédex registration has been confirmed! Your official partner Pokémon <strong>${meta.name}</strong> is synchronized with your entry pass.
         </p>
         <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed #F59E0B; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-weight: bold; color: #FDE68A;">
-          PASS ID: <span style="font-family: monospace; letter-spacing: 2px;">${passId || 'BTS-CONFIRMED'}</span>
+          PASS ID: <span style="font-family: monospace; letter-spacing: 2px;">${resolvedPassId}</span>
         </div>
       </div>
 
@@ -245,16 +281,37 @@ export const sendPassEmail = async ({
           <img src="cid:trainerCardImg" alt="Trainer Card" style="max-width: 320px; width: 100%; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 12px 30px rgba(0,0,0,0.8);" />
         </div>
       `
-          : ''
+          : `
+        <div style="text-align: center; margin: 24px 0; background: #0B1118; border: 2px solid ${meta.accent}; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+          <span style="background-color: ${meta.accent}; color: #000000; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">${meta.type}</span>
+          <h2 style="color: #FFFFFF; margin: 12px 0 4px 0; font-size: 22px; letter-spacing: 2px; font-family: monospace;">${meta.name}</h2>
+          <p style="color: #94A3B8; font-size: 13px; margin: 0 0 16px 0;">${meta.badge}</p>
+          <img src="${meta.artwork}" alt="${meta.name}" style="width: 170px; height: 170px; object-fit: contain; margin: 0 auto; display: block; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));" />
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.15);">
+            <p style="color: #94A3B8; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">Official Entry QR Pass</p>
+            <img src="${qrCodeUrl}" alt="Entry QR" style="width: 130px; height: 130px; border-radius: 8px; border: 2px solid ${meta.accent}; background: #FFFFFF; padding: 6px;" />
+          </div>
+        </div>
+      `
       }
 
-      <div style="background-color: #1E293B; border-radius: 8px; padding: 14px; margin: 20px 0; font-size: 13px; color: #94A3B8; line-height: 1.5;">
-        <strong style="color: #F1F5F9;">📎 Attached to this email:</strong>
-        <ul style="margin: 6px 0 0 0; padding-left: 20px;">
-          ${attachments.map((a) => `<li><strong>${a.filename}</strong></li>`).join('')}
-        </ul>
-        <p style="margin: 8px 0 0 0; font-size: 12px;">Please present your QR pass (either on your phone or printed) at the entrance of CV 402 on event day.</p>
-      </div>
+      ${
+        attachments.length > 0
+          ? `
+        <div style="background-color: #1E293B; border-radius: 8px; padding: 14px; margin: 20px 0; font-size: 13px; color: #94A3B8; line-height: 1.5;">
+          <strong style="color: #F1F5F9;">📎 Attached to this email:</strong>
+          <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+            ${attachments.map((a) => `<li><strong>${a.filename}</strong></li>`).join('')}
+          </ul>
+          <p style="margin: 8px 0 0 0; font-size: 12px;">Please present your QR pass (either on your phone or printed) at the entrance of CV 402 on event day.</p>
+        </div>
+      `
+          : `
+        <div style="background-color: #1E293B; border-radius: 8px; padding: 14px; margin: 20px 0; font-size: 13px; color: #94A3B8; line-height: 1.5; text-align: center;">
+          <p style="margin: 0; font-size: 13px; color: #E2E8F0;">⚡ Please present this digital pass or your Pass ID at the entrance of CV 402 on event day.</p>
+        </div>
+      `
+      }
 
       <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 24px 0 16px 0;" />
       <p style="font-size: 11px; color: #64748B; margin: 0; text-align: center;">

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { transaction, query } from '../lib/database.js';
 import { generateVerificationToken, hashToken } from '../utils/token.js';
 import env from '../config/env.js';
+import logger from '../utils/logger.js';
 import { sendVerificationEmail, sendConfirmationEmail, sendRegistrationOtpEmail, sendPassEmail } from './email.service.js';
 
 // In-memory store for registration OTPs (with expiry and rate limiting)
@@ -298,13 +299,31 @@ export const registerParticipant = async (eventId, registrationData) => {
   // Clean up in-memory OTP store
   registrationOtpStore.delete(normalizedEmail);
 
-  // If not verified via OTP, send verification link email
-  if (!result.isVerifiedDirectly) {
-    await sendVerificationEmail({
+  // If verified directly via OTP, immediately dispatch official pass email directly to student's inbox
+  if (result.isVerifiedDirectly) {
+    const passId = `BTS-${String(result.registration.id).slice(0, 8).toUpperCase()}`;
+    sendPassEmail({
+      to: result.registration.email,
+      fullName: result.registration.full_name,
+      eventTitle: result.eventTitle || 'Beyond the Screen',
+      passId,
+      pokemonName: result.registration.favourite_pokemon || 'Starter Partner',
+    })
+      .then(() => {
+        logger.info(`[SERVER PASS DISPATCH] Automatically dispatched pass email to ${result.registration.email} (${passId})`);
+      })
+      .catch((err) => {
+        logger.error('[SERVER PASS DISPATCH] Failed to dispatch pass email on registration:', err);
+      });
+  } else {
+    // If not verified via OTP, send verification link email
+    sendVerificationEmail({
       to: result.registration.email,
       fullName: result.registration.full_name,
       eventTitle: result.eventTitle,
       verificationUrl: result.verificationUrl,
+    }).catch((err) => {
+      logger.error('[SERVER VERIFY DISPATCH] Failed to send verification email:', err);
     });
   }
 
@@ -378,6 +397,22 @@ export const verifyRegistrationToken = async (rawToken) => {
        RETURNING id, event_id, full_name, email, status, verified_at`,
       [reg.id]
     );
+
+    // Send confirmed pass email upon link verification
+    const passId = `BTS-${String(reg.id).slice(0, 8).toUpperCase()}`;
+    sendPassEmail({
+      to: reg.email,
+      fullName: reg.full_name,
+      eventTitle: reg.event_title || 'Beyond the Screen',
+      passId,
+      pokemonName: reg.favourite_pokemon || 'Starter Partner',
+    })
+      .then(() => {
+        logger.info(`[SERVER PASS DISPATCH] Sent pass email after token verification to ${reg.email}`);
+      })
+      .catch((err) => {
+        logger.error('[SERVER PASS DISPATCH] Failed to send pass email on token verification:', err);
+      });
 
     return {
       alreadyVerified: false,
